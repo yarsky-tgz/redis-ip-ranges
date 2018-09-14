@@ -1,0 +1,30 @@
+{
+  "name": "redis-ip-ranges",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yarsky-tgz/redis-ip-ranges.git"
+  },
+  "author": "Yaroslav Dobzhanskij <merlyn.tgz@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yarsky-tgz/redis-ip-ranges/issues"
+  },
+  "homepage": "https://github.com/yarsky-tgz/redis-ip-ranges#readme",
+  "dependencies": {
+    "@types/ip": "0.0.31",
+    "handy-redis": "^1.3.2",
+    "ip": "^1.1.5"
+  },
+  "devDependencies": {
+    "redis": "^2.8.0",
+    "typescript": "^3.0.3"
+  }
+}
