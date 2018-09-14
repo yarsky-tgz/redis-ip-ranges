@@ -53,7 +53,7 @@ class RedisIpRanges {
             if (yield this.client.sismember(this.IPS_KEY, ip))
                 return true;
             const longIp = ip_1.toLong(ip);
-            const candidate = yield this.client.zrangebyscore(this.INDEX_KEY, longIp, 4000000000, 'limit', 0, 1);
+            const candidate = yield this.client.zrangebyscore(this.INDEX_KEY, longIp, Infinity, 'limit', 0, 1);
             if (candidate.length)
                 return (longIp > parseInt(yield this.client.get(this.CIDR_KEY + candidate[0])));
             return false;
