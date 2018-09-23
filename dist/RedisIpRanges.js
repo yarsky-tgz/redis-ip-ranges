@@ -28,12 +28,6 @@ class RedisIpRanges {
             }
         });
     }
-    deleteCidr(cidr) {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this.client.zrem(this.INDEX_KEY, cidr);
-            return this.client.del(this.CIDR_KEY + cidr);
-        });
-    }
     insert(cidr) {
         return __awaiter(this, void 0, void 0, function* () {
             if (cidr.indexOf('/') === -1)
@@ -74,12 +68,16 @@ class RedisIpRanges {
     }
     remove(ip) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (ip.indexOf('/') !== -1)
-                yield this.deleteCidr(ip);
+            if (ip.indexOf('/') !== -1) {
+                yield this.client.zrem(this.INDEX_KEY, ip);
+                return this.client.del(this.CIDR_KEY + ip);
+            }
             yield this.client.srem(this.IPS_KEY, ip);
             const candidate = yield this.getCidrByIp(ip);
-            if (candidate)
-                yield this.deleteCidr(candidate);
+            if (candidate) {
+                yield this.client.zrem(this.INDEX_KEY, candidate);
+                return this.client.del(this.CIDR_KEY + candidate);
+            }
         });
     }
 }
