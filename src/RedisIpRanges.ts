@@ -22,6 +22,10 @@ class RedisIpRanges {
           if (minValCheck < longIp) return cidr;
       }
   }
+  private async deleteCidr(cidr: string) {
+      await this.client.zrem(this.INDEX_KEY, cidr);
+      return this.client.del(this.CIDR_KEY + cidr);
+  }
   async insert(cidr: string) {
     if (cidr.indexOf('/') === -1) return this.client.sadd(this.IPS_KEY, cidr);
     const subnet: SubnetInfo = cidrSubnet(cidr);
@@ -52,16 +56,10 @@ class RedisIpRanges {
     return !!(await this.getCidrByIp(ip));
   }
   async remove(ip: string) {
-    if (ip.indexOf('/') !== -1) {
-        await this.client.zrem(this.INDEX_KEY, ip);
-        return this.client.del(this.CIDR_KEY + ip);
-    }
+    if (ip.indexOf('/') !== -1) await this.deleteCidr(ip);
     await this.client.srem(this.IPS_KEY, ip);
     const candidate = await this.getCidrByIp(ip);
-    if (candidate) {
-        await this.client.zrem(this.INDEX_KEY, candidate);
-        return this.client.del(this.CIDR_KEY + candidate);
-    }
+    if (candidate) await this.deleteCidr(candidate);
   }
 }
 

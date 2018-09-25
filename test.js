@@ -30,5 +30,5 @@ const rangesHandler = new RedisIpRanges(client, 'proxies');
   console.log('Delete ip');
   console.log(await rangesHandler.check('10.10.10.10')); //false
   console.log(await rangesHandler.check('10.11.11.5')); //false
-  console.log(await rangesHandler.check('1.1.1.1')); //true
+  console.log(await rangesHandler.check('1.1.1.1')); //false
 })();
