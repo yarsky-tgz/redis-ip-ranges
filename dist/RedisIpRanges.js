@@ -68,8 +68,8 @@ class RedisIpRanges {
     check(ip) {
         return __awaiter(this, void 0, void 0, function* () {
             if (yield this.client.sismember(this.IPS_KEY, ip))
-                return true;
-            return !!(yield this.getCidrByIp(ip));
+                return ip;
+            return this.getCidrByIp(ip);
         });
     }
     remove(ip) {
