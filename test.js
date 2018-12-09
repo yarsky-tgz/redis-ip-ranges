@@ -1,12 +1,20 @@
 const redis = require('redis');
-const RedisIpRanges = require('./dist');
-const client = redis.createClient();
-const rangesHandler = new RedisIpRanges(client, 'proxies');
+const redisClient = redis.createClient();
+const RedisIpRanges = require('redis-ip-ranges');
+const proxiesRanges = new RedisIpRanges(redisClient, 's1-proxies');
+const present = require('present');
 
 (async () => {
-  await rangesHandler.insertBulk(['127.0.0.1', '10.0.0.0/8']);
-  console.log(await rangesHandler.check('127.0.0.1')); //true
-  console.log(await rangesHandler.check('10.10.128.1')); //true
-  console.log(await rangesHandler.check('127.0.0.2')); //false
-  console.log(await rangesHandler.check('8.8.8.8')); //false
+  const startTime1 = present();
+  for (let i = 0; i < 100000; i++) await proxiesRanges.check('37.73.12.161');
+  const finishTime1 = present();
+  console.log(`100 000 checks for NOT PROXY ip taken ${(finishTime1 - startTime1) / 1000.0} seconds`);
+  const startTime2 = present();
+  for (let i = 0; i < 100000; i++) await proxiesRanges.check('181.224.136.5');
+  const finishTime2 = present();
+  console.log(`100 000 checks for PROXY ip (part of CIDR range) taken ${(finishTime2 - startTime2) / 1000.0} seconds`);
+  const startTime3 = present();
+  for (let i = 0; i < 100000; i++) await proxiesRanges.check('1.0.0.88');
+  const finishTime3 = present();
+  console.log(`100 000 checks for PROXY ip (single IP) taken ${(finishTime3 - startTime3) / 1000.0} seconds`);
 })();
