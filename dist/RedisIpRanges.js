@@ -10,12 +10,28 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 const ip_1 = require("ip");
 const handy_redis_1 = require("handy-redis");
 class RedisIpRanges {
-    constructor(client, prefix = 'proxies') {
+    constructor(client, prefix, ttl = 86400 * 2) {
         this.client = handy_redis_1.createHandyClient(client);
         this.prefix = prefix;
-        this.IPS_KEY = this.prefix + ':ips';
-        this.INDEX_KEY = this.prefix + ':index';
-        this.CIDR_KEY = this.prefix + ':cidr:';
+        this.ttl = ttl;
+        this.VERSION_KEY = `${prefix}:version`;
+    }
+    init(version) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (version)
+                this.setVersion(version);
+            else
+                version = yield this.getVersion();
+            this.IPS_KEY = `${this.prefix}.${version}:ips`;
+            this.INDEX_KEY = `${this.prefix}.${version}:index`;
+            this.CIDR_KEY = `${this.prefix}.${version}:cidr`;
+        });
+    }
+    getVersion() {
+        return this.client.get(this.VERSION_KEY);
+    }
+    setVersion(version) {
+        return this.client.set(this.VERSION_KEY, version);
     }
     getCidrByIp(ip) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -40,6 +56,8 @@ class RedisIpRanges {
                 return this.client.sadd(this.IPS_KEY, cidr);
             const subnet = ip_1.cidrSubnet(cidr);
             yield this.client.zadd(this.INDEX_KEY, [ip_1.toLong(subnet.lastAddress), cidr]);
+            yield this.client.expire(this.INDEX_KEY, this.ttl);
+            yield this.client.expire(this.CIDR_KEY + cidr, this.ttl);
             return this.client.set(this.CIDR_KEY + cidr, ip_1.toLong(subnet.firstAddress).toString());
         });
     }
@@ -56,17 +74,22 @@ class RedisIpRanges {
                 const subnet = ip_1.cidrSubnet(cidr);
                 ranges.push([ip_1.toLong(subnet.lastAddress), cidr]);
                 minimals.push([this.CIDR_KEY + cidr, ip_1.toLong(subnet.firstAddress).toString()]);
+                this.client.expire(this.CIDR_KEY + cidr, this.ttl);
             }
-            if (ips.length)
+            if (ips.length) {
                 yield this.client.sadd(this.IPS_KEY, ...ips);
+                this.client.expire(this.IPS_KEY, this.ttl);
+            }
             if (ranges.length) {
                 yield this.client.zadd(this.INDEX_KEY, ...ranges);
+                this.client.expire(this.INDEX_KEY, this.ttl);
                 yield this.client.mset(...minimals);
             }
         });
     }
     check(ip) {
         return __awaiter(this, void 0, void 0, function* () {
+            yield this.init();
             if (yield this.client.sismember(this.IPS_KEY, ip))
                 return ip;
             return this.getCidrByIp(ip);
@@ -74,6 +97,7 @@ class RedisIpRanges {
     }
     remove(ip) {
         return __awaiter(this, void 0, void 0, function* () {
+            yield this.init();
             if (ip.indexOf('/') !== -1)
                 yield this.deleteCidr(ip);
             yield this.client.srem(this.IPS_KEY, ip);
