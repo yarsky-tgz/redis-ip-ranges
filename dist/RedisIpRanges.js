@@ -18,10 +18,7 @@ class RedisIpRanges {
     }
     init(version) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (version)
-                this.setVersion(version);
-            else
-                version = yield this.getVersion();
+            version = version || (yield this.getVersion());
             this.IPS_KEY = `${this.prefix}.${version}:ips`;
             this.INDEX_KEY = `${this.prefix}.${version}:index`;
             this.CIDR_KEY = `${this.prefix}.${version}:cidr`;

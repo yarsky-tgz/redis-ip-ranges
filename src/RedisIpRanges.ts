@@ -16,8 +16,7 @@ class RedisIpRanges {
     this.VERSION_KEY = `${prefix}:version`;
   }
   async init(version?: string) {
-    if (version) this.setVersion(version);
-    else version = await this.getVersion();
+    version = version || await this.getVersion();
     this.IPS_KEY = `${this.prefix}.${version}:ips`;
     this.INDEX_KEY = `${this.prefix}.${version}:index`;
     this.CIDR_KEY = `${this.prefix}.${version}:cidr`;
@@ -25,7 +24,7 @@ class RedisIpRanges {
   private getVersion() {
     return this.client.get(this.VERSION_KEY);
   }
-  private setVersion(version: string) {
+  setVersion(version: string) {
     return this.client.set(this.VERSION_KEY, version);
   }
   private async getCidrByIp(ip: string) {
