@@ -46,7 +46,7 @@ class RedisIpRanges {
       stream.on('error', err => reject(err));
       stream.on('end', async () => {
         try {
-          await this.client.del(...keys);
+          while (keys.length > 0) await this.client.del(...keys.splice(-1000, 1000));
         } catch (e) {
           reject(e);
         }
