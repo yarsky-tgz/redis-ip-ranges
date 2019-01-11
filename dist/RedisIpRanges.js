@@ -34,20 +34,29 @@ class RedisIpRanges {
         return this.client.set(this.VERSION_KEY, version);
     }
     clean(version) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const match = `${this.prefix}.${version}*`;
-            const stream = this.client.scanStream({
-                match,
-                count: 100
-            });
+        const match = `${this.prefix}.${version}*`;
+        const stream = this.client.scanStream({
+            match,
+            count: 100
+        });
+        return new Promise((resolve, reject) => {
             const keys = [];
             stream.on('data', function (resultKeys) {
-                // `resultKeys` is an array of strings representing key names
                 for (let i = 0; i < resultKeys.length; i++) {
                     keys.push(resultKeys[i]);
                 }
             });
-            stream.on('end', () => this.client.del(...keys));
+            stream.on('error', err => reject(err));
+            stream.on('end', () => __awaiter(this, void 0, void 0, function* () {
+                try {
+                    while (keys.length > 0)
+                        yield this.client.del(...keys.splice(-1000, 1000));
+                }
+                catch (e) {
+                    reject(e);
+                }
+                resolve();
+            }));
         });
     }
     getCidrByIp(ip) {
