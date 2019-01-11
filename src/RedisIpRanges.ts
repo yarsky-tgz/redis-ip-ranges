@@ -30,21 +30,29 @@ class RedisIpRanges {
   setVersion(version: string) {
     return this.client.set(this.VERSION_KEY, version);
   }
-  async clean(version: string) {
+  clean(version: string) {
     const match = `${this.prefix}.${version}*`;
     const stream = this.client.scanStream({
       match,
       count: 100
     });
-
-    const keys: string[] = [];
-    stream.on('data', function (resultKeys: string[]) {
-      // `resultKeys` is an array of strings representing key names
-      for (let i = 0; i < resultKeys.length; i++) {
-        keys.push(resultKeys[i]);
-      }
+    return new Promise((resolve, reject) => {
+      const keys: string[] = [];
+      stream.on('data', function (resultKeys: string[]) {
+        for (let i = 0; i < resultKeys.length; i++) {
+          keys.push(resultKeys[i]);
+        }
+      });
+      stream.on('error', err => reject(err));
+      stream.on('end', async () => {
+        try {
+          await this.client.del(...keys);
+        } catch (e) {
+          reject(e);
+        }
+        resolve();
+      });
     });
-    stream.on('end', () => this.client.del(...keys));
   }
   private async getCidrByIp(ip: string) {
     const longIp = toLong(ip);
