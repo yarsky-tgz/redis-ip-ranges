@@ -1,6 +1,6 @@
-const redis = require('redis');
-const redisClient = redis.createClient();
-const RedisIpRanges = require('redis-ip-ranges');
+const Redis = require('ioredis');
+const redisClient = new Redis();
+const RedisIpRanges = require('./dist/index');
 const proxiesRanges = new RedisIpRanges(redisClient, 's1-proxies');
 const present = require('present');
 
