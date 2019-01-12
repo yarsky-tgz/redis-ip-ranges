@@ -1,21 +1,22 @@
 import { toLong, cidrSubnet } from "ip";
-import {Redis, KeyType} from "ioredis";
+import {Redis} from "ioredis";
+import {RedisIpRangesOptions} from "../index";
 const rangeReducer = (result: string[], range: [number|string, string]) => {
   range.forEach((element: number|string) => result.push(element.toString()));
   return result;
 };
 class RedisIpRanges {
   private client: Redis;
+  private whitelist: RedisIpRanges;
   readonly prefix: string;
   private IPS_KEY: string;
   private INDEX_KEY: string;
   private CIDR_KEY: string;
   readonly VERSION_KEY: string;
-  readonly ttl: number;
-  constructor(client: Redis, prefix: string, ttl: number = 86400 * 2) {
+  constructor(client: Redis, prefix: string, options: RedisIpRangesOptions) {
     this.client = client;
     this.prefix = prefix;
-    this.ttl = ttl;
+    (this.whitelist as any) = options.whitelist;
     this.VERSION_KEY = `${prefix}:version`;
   }
   async init(version?: string) {
@@ -70,8 +71,6 @@ class RedisIpRanges {
     if (cidr.indexOf('/') === -1) return this.client.sadd(this.IPS_KEY, cidr);
     const subnet: SubnetInfo = cidrSubnet(cidr);
     await this.client.zadd(this.INDEX_KEY, toLong(subnet.lastAddress).toString(), cidr);
-    await this.client.expire(this.INDEX_KEY, this.ttl);
-    await this.client.expire(this.CIDR_KEY + cidr, this.ttl);
     return this.client.set(this.CIDR_KEY + cidr, toLong(subnet.firstAddress).toString());
   }
   async insertBulk(cidrs: string[]) {
@@ -86,21 +85,19 @@ class RedisIpRanges {
       const subnet: SubnetInfo = cidrSubnet(cidr);
       ranges.push([toLong(subnet.lastAddress), cidr]);
       minimals.push([this.CIDR_KEY + cidr, toLong(subnet.firstAddress).toString()]);
-      this.client.expire(this.CIDR_KEY + cidr, this.ttl);
     }
     if (ips.length) {
       await this.client.sadd(this.IPS_KEY, ...ips);
-      this.client.expire(this.IPS_KEY, this.ttl);
     }
 
     if (ranges.length) {
       await this.client.zadd(this.INDEX_KEY, ...ranges.reduce(rangeReducer, []));
-      this.client.expire(this.INDEX_KEY, this.ttl);
       if (minimals.length > 1) await (this.client.mset as any)(...minimals.reduce(rangeReducer, []));
     }
   }
   async check(ip: string): Promise<string> {
     await this.init();
+    if (this.whitelist && await this.whitelist.check(ip)) return;
     if (await this.client.sismember(this.IPS_KEY, ip)) return ip;
     return this.getCidrByIp(ip);
   }
