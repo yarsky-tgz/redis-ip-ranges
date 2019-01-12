@@ -4,6 +4,7 @@ export = RedisIpRanges;
 declare namespace RedisIpRanges {
   export interface RedisIpRangesOptions {
     whitelist?: RedisIpRanges;
+    versioning?: boolean;
   }
 }
 declare class RedisIpRanges {

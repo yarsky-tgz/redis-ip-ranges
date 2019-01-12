@@ -5,6 +5,9 @@ const rangeReducer = (result: string[], range: [number|string, string]) => {
   range.forEach((element: number|string) => result.push(element.toString()));
   return result;
 };
+const defaultOptions: RedisIpRangesOptions = {
+  versioning: true,
+};
 class RedisIpRanges {
   private client: Redis;
   private whitelist: RedisIpRanges;
@@ -13,22 +16,28 @@ class RedisIpRanges {
   private INDEX_KEY: string;
   private CIDR_KEY: string;
   readonly VERSION_KEY: string;
+  readonly versioning: boolean;
   constructor(client: Redis, prefix: string, options: RedisIpRangesOptions) {
+    options = Object.assign({}, defaultOptions, options);
     this.client = client;
     this.prefix = prefix;
+    this.versioning = options.versioning;
     (this.whitelist as any) = options.whitelist;
     this.VERSION_KEY = `${prefix}:version`;
   }
   async init(version?: string) {
-    version = version || await this.getVersion();
+    if (this.versioning) version = version || await this.getVersion();
+    else version = 'default';
     this.IPS_KEY = `${this.prefix}.${version}:ips`;
     this.INDEX_KEY = `${this.prefix}.${version}:index`;
     this.CIDR_KEY = `${this.prefix}.${version}:cidr`;
   }
-  getVersion() {
+  async getVersion() {
+    if (!this.versioning) return 'default';
     return this.client.get(this.VERSION_KEY);
   }
   setVersion(version: string) {
+    if (!this.versioning) return;
     return this.client.set(this.VERSION_KEY, version);
   }
   clean(version: string) {

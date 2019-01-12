@@ -12,25 +12,39 @@ const rangeReducer = (result, range) => {
     range.forEach((element) => result.push(element.toString()));
     return result;
 };
+const defaultOptions = {
+    versioning: true,
+};
 class RedisIpRanges {
-    constructor(client, prefix, ttl = 86400 * 2) {
+    constructor(client, prefix, options) {
+        options = Object.assign({}, defaultOptions, options);
         this.client = client;
         this.prefix = prefix;
-        this.ttl = ttl;
+        this.versioning = options.versioning;
+        this.whitelist = options.whitelist;
         this.VERSION_KEY = `${prefix}:version`;
     }
     init(version) {
         return __awaiter(this, void 0, void 0, function* () {
-            version = version || (yield this.getVersion());
+            if (this.versioning)
+                version = version || (yield this.getVersion());
+            else
+                version = 'default';
             this.IPS_KEY = `${this.prefix}.${version}:ips`;
             this.INDEX_KEY = `${this.prefix}.${version}:index`;
             this.CIDR_KEY = `${this.prefix}.${version}:cidr`;
         });
     }
     getVersion() {
-        return this.client.get(this.VERSION_KEY);
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!this.versioning)
+                return 'default';
+            return this.client.get(this.VERSION_KEY);
+        });
     }
     setVersion(version) {
+        if (!this.versioning)
+            return;
         return this.client.set(this.VERSION_KEY, version);
     }
     clean(version) {
@@ -82,8 +96,6 @@ class RedisIpRanges {
                 return this.client.sadd(this.IPS_KEY, cidr);
             const subnet = ip_1.cidrSubnet(cidr);
             yield this.client.zadd(this.INDEX_KEY, ip_1.toLong(subnet.lastAddress).toString(), cidr);
-            yield this.client.expire(this.INDEX_KEY, this.ttl);
-            yield this.client.expire(this.CIDR_KEY + cidr, this.ttl);
             return this.client.set(this.CIDR_KEY + cidr, ip_1.toLong(subnet.firstAddress).toString());
         });
     }
@@ -100,15 +112,12 @@ class RedisIpRanges {
                 const subnet = ip_1.cidrSubnet(cidr);
                 ranges.push([ip_1.toLong(subnet.lastAddress), cidr]);
                 minimals.push([this.CIDR_KEY + cidr, ip_1.toLong(subnet.firstAddress).toString()]);
-                this.client.expire(this.CIDR_KEY + cidr, this.ttl);
             }
             if (ips.length) {
                 yield this.client.sadd(this.IPS_KEY, ...ips);
-                this.client.expire(this.IPS_KEY, this.ttl);
             }
             if (ranges.length) {
                 yield this.client.zadd(this.INDEX_KEY, ...ranges.reduce(rangeReducer, []));
-                this.client.expire(this.INDEX_KEY, this.ttl);
                 if (minimals.length > 1)
                     yield this.client.mset(...minimals.reduce(rangeReducer, []));
             }
@@ -117,6 +126,8 @@ class RedisIpRanges {
     check(ip) {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.init();
+            if (this.whitelist && (yield this.whitelist.check(ip)))
+                return;
             if (yield this.client.sismember(this.IPS_KEY, ip))
                 return ip;
             return this.getCidrByIp(ip);
