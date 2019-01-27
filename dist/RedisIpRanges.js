@@ -82,7 +82,7 @@ class RedisIpRanges {
             const [cidr] = yield this.client.zrangebyscore(this.INDEX_KEY, longIp, Infinity, 'limit', '0', '1'); //(this.client.zrangebyscore as any)(this.INDEX_KEY, longIp, Infinity, 'limit' as any, 0 as any, 1 as any);
             if (cidr) {
                 const minValCheck = parseInt(yield this.client.get(this.CIDR_KEY + cidr), 10);
-                if (minValCheck < longIp)
+                if (minValCheck <= longIp)
                     return cidr;
             }
         });
