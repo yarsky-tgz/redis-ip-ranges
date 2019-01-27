@@ -1,6 +1,6 @@
 {
   "name": "redis-ip-ranges",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "",
   "main": "dist/index.js",
   "types": "index.d.ts",

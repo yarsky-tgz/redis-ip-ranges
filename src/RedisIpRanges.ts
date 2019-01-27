@@ -30,7 +30,7 @@ class RedisIpRanges {
     else version = 'default';
     this.IPS_KEY = `${this.prefix}.${version}:ips`;
     this.INDEX_KEY = `${this.prefix}.${version}:index`;
-    this.CIDR_KEY = `${this.prefix}.${version}:cidr`;
+    this.CIDR_KEY = `${this.prefix}.${version}:cidr:`;
   }
   async getVersion() {
     if (!this.versioning) return 'default';
