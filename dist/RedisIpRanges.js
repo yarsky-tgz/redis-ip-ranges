@@ -95,7 +95,8 @@ class RedisIpRanges {
     }
     insert(cidr) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.init();
+            if (!this.IPS_KEY)
+                yield this.init();
             if (cidr.indexOf('/') === -1)
                 return this.client.sadd(this.IPS_KEY, cidr);
             const subnet = ip_1.cidrSubnet(cidr);
@@ -105,7 +106,8 @@ class RedisIpRanges {
     }
     insertBulk(cidrs) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.init();
+            if (!this.IPS_KEY)
+                yield this.init();
             const ips = [];
             const ranges = [];
             const minimals = [];

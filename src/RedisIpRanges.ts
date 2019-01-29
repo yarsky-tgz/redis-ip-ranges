@@ -78,14 +78,14 @@ class RedisIpRanges {
     return this.client.del(this.CIDR_KEY + cidr);
   }
   async insert(cidr: string) {
-    await this.init();
+    if (!this.IPS_KEY) await this.init();
     if (cidr.indexOf('/') === -1) return this.client.sadd(this.IPS_KEY, cidr);
     const subnet: SubnetInfo = cidrSubnet(cidr);
     await this.client.zadd(this.INDEX_KEY, toLong(subnet.lastAddress).toString(), cidr);
     return this.client.set(this.CIDR_KEY + cidr, toLong(subnet.firstAddress).toString());
   }
   async insertBulk(cidrs: string[]) {
-    await this.init();
+    if (!this.IPS_KEY) await this.init();
     const ips: string[] = [];
     const ranges: [number, string][] = [];
     const minimals: [string, string][] = [];
